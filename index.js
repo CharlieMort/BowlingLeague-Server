@@ -2,11 +2,13 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const sqlite = require("sqlite3");
+const http = require("http");
 
 const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
 app.use(cors());
+const server = http.createServer(app);
 
 function getValueForBowl(bowl) {
     let bowls = bowl.split("");
@@ -177,4 +179,4 @@ app.post("/del-game", (req, res) => {
     db.close();
 })
 
-app.listen(PORT, () => console.log(`Server Listening On Port ${PORT}`));
+server.listen(PORT, () => console.log(`Server Listening On Port ${PORT}`));
