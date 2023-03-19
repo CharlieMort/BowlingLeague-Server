@@ -3,7 +3,7 @@ const app = express();
 const cors = require("cors");
 const sqlite = require("sqlite3");
 
-const PORT = 5000;
+const PORT = 5000 || process.env.PORT;
 
 app.use(express.json());
 app.use(cors());
@@ -60,7 +60,15 @@ function calculateBowl(scoreCard) {
     return score;
 }
 
-app.get("/players", (req, res) => {
+if (!(!process.env.NODE_ENV || process.env.NODE_ENV === "development")) {
+    app.use(express.static(path.join(__dirname, './build')));
+
+    app.get('/', (req, res) => {
+        res.sendFile(path.join(__dirname, './build/index.html'));
+    });
+}
+
+app.get("/api/players", (req, res) => {
     const db = new sqlite.Database("db.db");
     db.all("SELECT * FROM Players ORDER BY totalScore DESC;", (err, rows) => {
         res.send(rows);
@@ -68,7 +76,7 @@ app.get("/players", (req, res) => {
     db.close();
 })
 
-app.post("/create-player", (req, res) => {
+app.post("/api/create-player", (req, res) => {
     const db = new sqlite.Database("db.db");
     let totalScore = req.body.totalScore?req.body.totalScore:0;
     db.run(`INSERT INTO Players(name, totalScore) VALUES ("${req.body.name}", ${totalScore});`, (err) => {
@@ -83,7 +91,7 @@ app.post("/create-player", (req, res) => {
     db.close();
 })
 
-app.post("/add-game", (req, res) => {
+app.post("/api/add-game", (req, res) => {
     const db = new sqlite.Database("db.db");
     let playerID;
     db.all(`SELECT * FROM Players WHERE name="${req.body.name}";`, (err, rows) => {
@@ -116,7 +124,7 @@ app.post("/add-game", (req, res) => {
     db.close();
 })
 
-app.get("/games", (req, res) => {
+app.get("/api/games", (req, res) => {
     const db = new sqlite.Database("db.db");
     db.all(`SELECT * FROM Games;`, (err, rows) => {
         res.send(rows);
@@ -125,7 +133,7 @@ app.get("/games", (req, res) => {
     db.close();
 })
 
-app.get("/games-with-name", (req, res) => {
+app.get("/api/games-with-name", (req, res) => {
     const db = new sqlite.Database("db.db");
     db.all(`SELECT Games.date, Games.gameID, Games.score, Games.scoreCard, Players.name FROM Games 
             JOIN Players 
@@ -151,7 +159,7 @@ function updateTotals() {
     db.close();
 }
 
-app.put("/update-totals", (req, res) => {
+app.put("/api/update-totals", (req, res) => {
     updateTotals();
     res.send("Should be donezo");
 });
