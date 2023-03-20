@@ -2,7 +2,7 @@
   "name": "server",
   "version": "1.0.0",
   "description": "",
-  "main": "functions/server.js",
+  "main": "index.js",
   "scripts": {
     "build": "netlify-lambda build express",
     "start": "node server-local.js"
