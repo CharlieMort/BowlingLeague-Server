@@ -2,14 +2,26 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const sqlite = require("sqlite3");
-const http = require("http");
 const path = require("path");
+const serverless = require("serverless-http");
 
 const PORT = process.env.PORT || 5000;
 
+const router = express.Router();
+router.get('/', (req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.write('<h1>Hello from Express.js!</h1>');
+    res.end();
+});
+
+
+
 app.use(express.json());
 app.use(cors());
-const server = http.createServer(app);
+app.use("/.netlify/functions/server", router);
+app.use('/', (req, res) => {
+    res.sendFile(path.join(__dirname, './build/index.html'));
+});
 
 function getValueForBowl(bowl) {
     let bowls = bowl.split("");
@@ -63,13 +75,11 @@ function calculateBowl(scoreCard) {
     return score;
 }
 
-app.use(express.static(path.join(__dirname, './build')));
+// app.use(express.static(path.join(__dirname, './build')));
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, './build/index.html'));
-});
 
-app.get("/api/players", (req, res) => {
+
+router.get("/api/players", (req, res) => {
     const db = new sqlite.Database("db.db");
     db.all("SELECT * FROM Players ORDER BY totalScore DESC;", (err, rows) => {
         res.send(rows);
@@ -77,7 +87,7 @@ app.get("/api/players", (req, res) => {
     db.close();
 })
 
-app.post("/api/create-player", (req, res) => {
+router.get("/api/create-player", (req, res) => {
     const db = new sqlite.Database("db.db");
     let totalScore = req.body.totalScore?req.body.totalScore:0;
     db.run(`INSERT INTO Players(name, totalScore) VALUES ("${req.body.name}", ${totalScore});`, (err) => {
@@ -92,7 +102,7 @@ app.post("/api/create-player", (req, res) => {
     db.close();
 })
 
-app.post("/api/add-game", (req, res) => {
+router.get("/api/add-game", (req, res) => {
     const db = new sqlite.Database("db.db");
     let playerID;
     db.all(`SELECT * FROM Players WHERE name="${req.body.name}";`, (err, rows) => {
@@ -125,7 +135,7 @@ app.post("/api/add-game", (req, res) => {
     db.close();
 })
 
-app.get("/api/games", (req, res) => {
+router.get("/api/games", (req, res) => {
     const db = new sqlite.Database("db.db");
     db.all(`SELECT * FROM Games;`, (err, rows) => {
         res.send(rows);
@@ -134,7 +144,7 @@ app.get("/api/games", (req, res) => {
     db.close();
 })
 
-app.get("/api/games-with-name", (req, res) => {
+router.get("/api/games-with-name", (req, res) => {
     const db = new sqlite.Database("db.db");
     db.all(`SELECT Games.date, Games.gameID, Games.score, Games.scoreCard, Players.name FROM Games 
             JOIN Players 
@@ -160,12 +170,12 @@ function updateTotals() {
     db.close();
 }
 
-app.put("/api/update-totals", (req, res) => {
+router.get("/api/update-totals", (req, res) => {
     updateTotals();
     res.send("Should be donezo");
 });
 
-app.post("/del-game", (req, res) => {
+router.get("/del-game", (req, res) => {
     console.log(req.body.gameID);
     const db = new sqlite.Database("db.db");
     db.run(`DELETE FROM Games WHERE gameID = ${req.body.gameID};`, (err) => {
@@ -178,4 +188,5 @@ app.post("/del-game", (req, res) => {
     db.close();
 })
 
-server.listen(PORT, () => console.log(`Server Listening On Port ${PORT}`));
+module.exports = app;
+module.exports.handler = serverless(app);
